@@ -10,6 +10,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Optional: generate processed CSVs for demo at build time
-RUN python pipeline.py || true
 
 CMD ["sh", "-c", "python -m gunicorn --bind 0.0.0.0:${PORT:-5000} wsgi:app"]
