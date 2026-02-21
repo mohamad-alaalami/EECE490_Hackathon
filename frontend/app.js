@@ -34,6 +34,7 @@ const elements = {
     overview: document.getElementById("page-overview"),
     clusters: document.getElementById("page-clusters"),
     "branch-detail": document.getElementById("page-branch-detail"),
+    bundles: document.getElementById("page-bundles"),
   },
   kpiTotalBranches: document.getElementById("kpi-total-branches"),
   kpiTotalRevenue: document.getElementById("kpi-total-revenue"),
@@ -59,6 +60,12 @@ const elements = {
   bundlesErrorText: document.getElementById("bundles-error-text"),
   bundlesWrap: document.getElementById("bundles-wrap"),
   bundlesTbody: document.getElementById("bundles-tbody"),
+  bundlesBranchesTable: document.getElementById("bundles-branches-table"),
+  bundlesBranchesTbody: document.getElementById("bundles-branches-tbody"),
+  bundlesDetailCard: document.getElementById("bundles-detail-card"),
+  bundlesBranchName: document.getElementById("bundles-branch-name"),
+  bundlesBackBtn: document.getElementById("bundles-back-btn"),
+  bundlesTableHeaders: [...document.querySelectorAll("#bundles-branches-table th[data-sort]")],
 };
 
 window.addEventListener("DOMContentLoaded", init);
@@ -91,6 +98,26 @@ function bindEvents() {
       renderOverviewTable();
     });
   });
+
+  // Bundles page handlers
+  if (elements.bundlesBackBtn) {
+    elements.bundlesBackBtn.addEventListener("click", renderBundlesPage);
+  }
+  if (elements.bundlesTableHeaders) {
+    elements.bundlesTableHeaders.forEach((header) => {
+      header.dataset.label = header.textContent.trim();
+      header.addEventListener("click", () => {
+        const key = header.dataset.sort;
+        if (state.sortKey === key) {
+          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = key;
+          state.sortDirection = key === "branch" ? "asc" : "desc";
+        }
+        renderBundlesBranchTable();
+      });
+    });
+  }
 }
 
 async function loadData() {
@@ -119,6 +146,7 @@ function hydrateUI() {
   renderOverviewKPIs();
   renderOverviewTable();
   renderClusters();
+  renderBundlesPage();
   if (state.branches.length > 0) {
     openBranchDetail(state.branches[0].branch, false);
   }
@@ -505,10 +533,87 @@ function setPage(pageName) {
   Object.keys(elements.pages).forEach((name) => {
     elements.pages[name].classList.toggle("active", name === pageName);
   });
-  elements.pageTitle.textContent =
-    pageName === "branch-detail"
-      ? `Branch Detail${state.selectedBranch ? `: ${state.selectedBranch}` : ""}`
-      : pageName.charAt(0).toUpperCase() + pageName.slice(1);
+  if (pageName === "bundles") {
+    elements.pageTitle.textContent = "Bundle Recommender";
+    renderBundlesPage();
+  } else {
+    elements.pageTitle.textContent =
+      pageName === "branch-detail"
+        ? `Branch Detail${state.selectedBranch ? `: ${state.selectedBranch}` : ""}`
+        : pageName.charAt(0).toUpperCase() + pageName.slice(1);
+  }
+}
+
+function renderBundlesPage() {
+  // Show branches list, hide detail
+  elements.bundlesDetailCard.style.display = "none";
+  const bundlesListCard = document.querySelector("#page-bundles .card.table-card:not(#bundles-detail-card)");
+  if (bundlesListCard) bundlesListCard.style.display = "block";
+  renderBundlesBranchTable();
+}
+
+function renderBundlesBranchTable() {
+  elements.bundlesBranchesTbody.innerHTML = "";
+  const rows = getProcessedBranches();
+  for (const branch of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(branch.branch)}</td>
+      <td>${branch.cluster}</td>
+      <td>${formatNumber(branch.health_score, 1)}</td>
+      <td><button style="padding: 6px 12px; background: #2b7bba; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">View Bundles</button></td>
+    `;
+    const btn = tr.querySelector("button");
+    btn.addEventListener("click", () => openBundlesDetail(branch.branch));
+    elements.bundlesBranchesTbody.appendChild(tr);
+  }
+}
+
+async function openBundlesDetail(branchName) {
+  // Hide list, show detail
+  const bundlesListCard = document.querySelector("#page-bundles .card.table-card:not(#bundles-detail-card)");
+  if (bundlesListCard) bundlesListCard.style.display = "none";
+  elements.bundlesDetailCard.style.display = "block";
+  elements.bundlesBranchName.textContent = branchName;
+
+  // Load and render bundles
+  elements.bundlesLoading.classList.add("hidden");
+  elements.bundlesEmpty.classList.add("hidden");
+  elements.bundlesError.classList.add("hidden");
+  elements.bundlesWrap.style.display = "none";
+
+  elements.bundlesLoading.classList.remove("hidden");
+
+  try {
+    const bundles = await fetchJson(API.bundles(branchName));
+    elements.bundlesLoading.classList.add("hidden");
+
+    if (!bundles || bundles.length === 0) {
+      elements.bundlesEmpty.classList.remove("hidden");
+      return;
+    }
+
+    elements.bundlesTbody.innerHTML = "";
+    for (const bundle of bundles) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(bundle.bundle_items)}</td>
+        <td>${formatPercent(bundle.discount_pct)}</td>
+        <td>${formatCurrency(bundle.bundle_price)}</td>
+        <td>${formatCurrency(bundle.expected_profit)}</td>
+        <td>${escapeHtml(bundle.reason)}</td>
+        <td>${formatNumber(bundle.lift, 2)}</td>
+        <td>${formatNumber(bundle.support, 2)}</td>
+      `;
+      elements.bundlesTbody.appendChild(tr);
+    }
+    elements.bundlesWrap.style.display = "block";
+  } catch (error) {
+    console.error("Error loading bundles:", error);
+    elements.bundlesLoading.classList.add("hidden");
+    elements.bundlesError.classList.remove("hidden");
+    elements.bundlesErrorText.textContent = `Error: ${error.message}`;
+  }
 }
 
 async function fetchJson(url) {

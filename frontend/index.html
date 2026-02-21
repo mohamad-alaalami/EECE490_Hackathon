@@ -24,6 +24,7 @@
         <button class="nav-tab active" data-page="overview">Overview</button>
         <button class="nav-tab" data-page="clusters">Clusters</button>
         <button class="nav-tab" data-page="branch-detail">Branch Detail</button>
+        <button class="nav-tab" data-page="bundles">Bundle Recommender</button>
       </nav>
 
       <div class="sidebar-foot">
@@ -102,6 +103,68 @@
           >
         </article>
         <div id="clusters-grid" class="clusters-grid"></div>
+      </section>
+
+      <section id="page-bundles" class="page">
+        <article class="card detail-header">
+          <div>
+            <h3>Bundle Recommender</h3>
+            <p class="badge">Test Bundle Feature</p>
+          </div>
+        </article>
+
+        <article class="card table-card">
+          <div class="table-head">
+            <h3>Branches with Bundles</h3>
+            <p style="font-size: 0.85rem; color: #666; margin-top: 4px;">Click a branch to view its bundle recommendations</p>
+          </div>
+          <div class="table-wrap">
+            <table id="bundles-branches-table">
+              <thead>
+                <tr>
+                  <th data-sort="branch">Branch</th>
+                  <th data-sort="cluster">Cluster</th>
+                  <th data-sort="health_score">Health Score</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bundles-branches-tbody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card table-card" id="bundles-detail-card" style="display: none;">
+          <div class="table-head">
+            <h3>Bundle Recommendations for <span id="bundles-branch-name">-</span></h3>
+            <button id="bundles-back-btn" style="padding: 8px 16px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">← Back to List</button>
+          </div>
+          <div id="bundles-loading" class="hidden">
+            <p>Loading bundle suggestions...</p>
+          </div>
+          <div id="bundles-empty" class="hidden">
+            <p><small>No bundle suggestions for this branch yet.</small></p>
+            <p><small>Run: <code>python scripts/run_bundles.py</code></small></p>
+          </div>
+          <div id="bundles-error" class="hidden">
+            <p id="bundles-error-text" style="color: #d9534f;"></p>
+          </div>
+          <div class="table-wrap" id="bundles-wrap" style="display: none;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bundle Items</th>
+                  <th>Discount</th>
+                  <th>Bundle Price</th>
+                  <th>Expected Profit</th>
+                  <th>Reason</th>
+                  <th>Lift</th>
+                  <th>Support</th>
+                </tr>
+              </thead>
+              <tbody id="bundles-tbody"></tbody>
+            </table>
+          </div>
+        </article>
       </section>
 
       <section id="page-branch-detail" class="page">
