@@ -9,6 +9,8 @@ const API = {
   clusters: `${API_BASE}/api/cluster-summary`,
   branchDetail: (branchName) =>
     `${API_BASE}/api/branch/${encodeURIComponent(branchName)}`,
+  bundles: (branchId) =>
+    `${API_BASE}/api/bundles/${encodeURIComponent(branchId)}`,
 };
 
 const state = {
@@ -51,6 +53,12 @@ const elements = {
   detailMayJuneDrop: document.getElementById("detail-may-june-drop"),
   monthlyTbody: document.getElementById("monthly-tbody"),
   revenueCanvas: document.getElementById("revenue-canvas"),
+  bundlesLoading: document.getElementById("bundles-loading"),
+  bundlesEmpty: document.getElementById("bundles-empty"),
+  bundlesError: document.getElementById("bundles-error"),
+  bundlesErrorText: document.getElementById("bundles-error-text"),
+  bundlesWrap: document.getElementById("bundles-wrap"),
+  bundlesTbody: document.getElementById("bundles-tbody"),
 };
 
 window.addEventListener("DOMContentLoaded", init);
@@ -243,6 +251,51 @@ async function openBranchDetail(branchName, switchPage) {
 
   renderMonthlyTable(detail.monthly || []);
   drawRevenueChart(detail.monthly || []);
+  loadAndRenderBundles(branch.branch);
+}
+
+async function loadAndRenderBundles(branchName) {
+  // Hide all bundle sections initially
+  elements.bundlesLoading.classList.add("hidden");
+  elements.bundlesEmpty.classList.add("hidden");
+  elements.bundlesError.classList.add("hidden");
+  elements.bundlesWrap.style.display = "none";
+
+  // Show loading
+  elements.bundlesLoading.classList.remove("hidden");
+
+  try {
+    // Use branch name (not ID) - adjust if your backend expects numeric ID
+    const bundles = await fetchJson(API.bundles(branchName));
+    elements.bundlesLoading.classList.add("hidden");
+
+    if (!bundles || bundles.length === 0) {
+      elements.bundlesEmpty.classList.remove("hidden");
+      return;
+    }
+
+    // Render bundles table
+    elements.bundlesTbody.innerHTML = "";
+    for (const bundle of bundles) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(bundle.bundle_items)}</td>
+        <td>${formatPercent(bundle.discount_pct)}</td>
+        <td>${formatCurrency(bundle.bundle_price)}</td>
+        <td>${formatCurrency(bundle.expected_profit)}</td>
+        <td>${escapeHtml(bundle.reason)}</td>
+        <td>${formatNumber(bundle.lift, 2)}</td>
+        <td>${formatNumber(bundle.support, 2)}</td>
+      `;
+      elements.bundlesTbody.appendChild(tr);
+    }
+    elements.bundlesWrap.style.display = "block";
+  } catch (error) {
+    console.error("Error loading bundles:", error);
+    elements.bundlesLoading.classList.add("hidden");
+    elements.bundlesError.classList.remove("hidden");
+    elements.bundlesErrorText.textContent = `Error: ${error.message}`;
+  }
 }
 
 function drawClusterMap(branches) {

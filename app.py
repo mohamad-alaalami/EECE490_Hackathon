@@ -30,12 +30,17 @@ def create_app() -> Flask:
     app = Flask(__name__)
     CORS(app)
 
+    # Data paths
+    PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "data", "processed")
+    BUNDLES_FILE = os.path.join(PROCESSED_DIR, "bundles.csv")
+
     # Global cache for branch data
     cache: Dict[str, object] = {
         "branches_df": pd.DataFrame(),
         "cluster_summary": [],
         "monthly_by_branch": {},
         "top_products_by_branch": {},
+        "bundles_df": pd.DataFrame(),
         "load_error": None,
     }
 
@@ -55,12 +60,19 @@ def create_app() -> Flask:
             cache["monthly_by_branch"] = monthly_by_branch
             cache["top_products_by_branch"] = top_products_by_branch
             cache["load_error"] = None
+
+            # Load bundles if available
+            if os.path.exists(BUNDLES_FILE):
+                cache["bundles_df"] = pd.read_csv(BUNDLES_FILE)
+            else:
+                cache["bundles_df"] = pd.DataFrame()
         except Exception as exc:
             cache["load_error"] = str(exc)
             cache["branches_df"] = pd.DataFrame()
             cache["cluster_summary"] = []
             cache["monthly_by_branch"] = {}
             cache["top_products_by_branch"] = {}
+            cache["bundles_df"] = pd.DataFrame()
 
     def _branch_payload(df: pd.DataFrame) -> List[dict]:
         """Convert DataFrame row to API payload."""
@@ -176,6 +188,33 @@ def create_app() -> Flask:
             "top_products": top_products,
         }
         return jsonify(payload)
+
+    @app.get("/api/bundles/<branch_id>")
+    def api_bundles(branch_id: str):
+        """Get bundle suggestions for a specific branch."""
+        bundles_df: pd.DataFrame = cache["bundles_df"]
+        if bundles_df.empty:
+            return jsonify([])
+
+        # Filter by branch_id (handle both string and numeric)
+        filtered = bundles_df[bundles_df["branch_id"].astype(str) == str(branch_id)]
+        if filtered.empty:
+            return jsonify([])
+
+        # Convert to list of dicts with rounded numbers
+        result = []
+        for _, row in filtered.iterrows():
+            result.append({
+                "branch_id": str(row["branch_id"]),
+                "bundle_items": row.get("bundle_items", ""),
+                "discount_pct": round(float(row.get("discount_pct", 0.0)), 4),
+                "bundle_price": round(float(row.get("bundle_price", 0.0)), 2),
+                "expected_profit": round(float(row.get("expected_profit", 0.0)), 2),
+                "reason": row.get("reason", ""),
+                "lift": round(float(row.get("lift", 0.0)), 4),
+                "support": round(float(row.get("support", 0.0)), 4),
+            })
+        return jsonify(result)
 
     # Load data on startup
     _reload_cache()

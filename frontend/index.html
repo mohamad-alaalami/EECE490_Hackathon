@@ -156,6 +156,36 @@
             </table>
           </div>
         </article>
+
+        <article class="card table-card">
+          <h3>Bundle Recommendations</h3>
+          <div id="bundles-loading" class="hidden">
+            <p>Loading bundle suggestions...</p>
+          </div>
+          <div id="bundles-empty" class="hidden">
+            <p><small>No bundle suggestions for this branch yet.</small></p>
+            <p><small>Run: <code>python scripts/run_bundles.py</code></small></p>
+          </div>
+          <div id="bundles-error" class="hidden">
+            <p id="bundles-error-text" style="color: #d9534f;"></p>
+          </div>
+          <div class="table-wrap" id="bundles-wrap" style="display: none;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bundle Items</th>
+                  <th>Discount</th>
+                  <th>Bundle Price</th>
+                  <th>Expected Profit</th>
+                  <th>Reason</th>
+                  <th>Lift</th>
+                  <th>Support</th>
+                </tr>
+              </thead>
+              <tbody id="bundles-tbody"></tbody>
+            </table>
+          </div>
+        </article>
       </section>
     </main>
   </div>

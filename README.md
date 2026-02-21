@@ -76,6 +76,37 @@ This quantifies **unrealized profit opportunity** in real dollars.
 - Margin trend
 - Health score breakdown
 - Gap vs cluster leader
+- **Bundle Recommendations** (see Bundle Recommender section)
+
+---
+
+## Bundle Recommender
+
+### What It Does
+Identifies product bundles that increase basket size and same-visit profitability:
+
+- **Low-sales items** bundled with **anchor items** (high volume)
+- Strategic discount to meet target bundle margin
+- Outputs: **lift** (correlation), **support** (co-occurrence %), **expected profit**
+
+### How to Run
+
+```bash
+python scripts/run_bundles.py
+```
+
+Creates: `data/processed/bundles.csv`
+
+Input files:
+- `data/raw/branch_item_sales.csv` (required): branch_id, item_id, revenue, cost, units_sold
+- `data/raw/transactions.csv` (optional): branch_id, transaction_id, item1_id, item2_id, ...
+
+Output columns: branch_id, bundle_items, discount_pct, bundle_price, expected_profit, reason, lift, support
+
+### Front-end
+Shows in **Branch Detail** view under "Bundle Recommendations":
+- If no bundles exist: "No bundle suggestions. Run: `python scripts/run_bundles.py`"
+- Otherwise: table with Bundle Items, Discount, Price, Profit, Reason, Lift, Support
 
 ---
 
