@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -29,6 +28,7 @@
 
       <div class="sidebar-foot">
         <p>ML Branch Insights</p>
+        <p><a href="/analytics">Analytics Page</a></p>
       </div>
     </aside>
 
@@ -56,12 +56,12 @@
             <h3 id="kpi-total-branches">0</h3>
           </article>
           <article class="card kpi">
-            <p>Total Opportunity Gap</p>
-            <h3 id="kpi-total-gap">$0</h3>
+            <p>Total Revenue</p>
+            <h3 id="kpi-total-revenue">$0</h3>
           </article>
           <article class="card kpi">
-            <p>Highest Fragility Branch</p>
-            <h3 id="kpi-lowest-health">-</h3>
+            <p>Average Health Score</p>
+            <h3 id="kpi-avg-health">-</h3>
           </article>
         </div>
 
@@ -77,11 +77,11 @@
                   <th data-sort="branch">Branch</th>
                   <th data-sort="cluster">Cluster</th>
                   <th data-sort="health_score">Health Score</th>
-                  <th data-sort="gap_profit">Gap Profit</th>
+                  <th data-sort="total_revenue">Total Revenue</th>
                   <th data-sort="avg_revenue">Avg Revenue</th>
-                  <th data-sort="margin">Margin</th>
                   <th data-sort="growth">Growth</th>
                   <th data-sort="volatility">Volatility</th>
+                  <th data-sort="may_june_drop">May-Jun Drop</th>
                 </tr>
               </thead>
               <tbody id="branches-tbody"></tbody>
@@ -94,9 +94,12 @@
         <article class="card cluster-map-card">
           <div class="cluster-map-head">
             <h3>Branch Clusters on PCA Map</h3>
-            <div id="cluster-legend" class="cluster-legend"></div>
           </div>
-          <canvas id="cluster-canvas" width="980" height="460" aria-label="Cluster PCA scatter plot"></canvas>
+          <img
+            src="/static/plots/cluster_pca_map.png"
+            alt="Cluster PCA map"
+            style="width:100%; border-radius:12px; border:1px solid #dfeae4;"
+          >
         </article>
         <div id="clusters-grid" class="clusters-grid"></div>
       </section>
@@ -115,16 +118,20 @@
             <h4 id="detail-health">-</h4>
           </article>
           <article class="card mini">
-            <p>Gap Profit</p>
-            <h4 id="detail-gap">-</h4>
+            <p>Avg Revenue</p>
+            <h4 id="detail-avg-revenue">-</h4>
           </article>
           <article class="card mini">
-            <p>Margin</p>
-            <h4 id="detail-margin">-</h4>
+            <p>Growth</p>
+            <h4 id="detail-growth">-</h4>
           </article>
           <article class="card mini">
             <p>Volatility</p>
             <h4 id="detail-volatility">-</h4>
+          </article>
+          <article class="card mini">
+            <p>May-Jun Drop</p>
+            <h4 id="detail-may-june-drop">-</h4>
           </article>
         </div>
 
@@ -143,7 +150,6 @@
                 <tr>
                   <th>Month</th>
                   <th>Revenue</th>
-                  <th>Profit</th>
                 </tr>
               </thead>
               <tbody id="monthly-tbody"></tbody>
@@ -154,6 +160,6 @@
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

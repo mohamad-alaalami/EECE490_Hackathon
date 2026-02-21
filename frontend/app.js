@@ -11,100 +11,6 @@ const API = {
     `${API_BASE}/api/branch/${encodeURIComponent(branchName)}`,
 };
 
-const mockBranches = [
-  {
-    branch: "Stories Zalka",
-    cluster: 2,
-    health_score: 74.2,
-    gap_profit: 12345,
-    avg_revenue: 56000,
-    margin: 0.31,
-    growth: 0.08,
-    volatility: 0.12,
-    bev_share: 0.68,
-    food_share: 0.32,
-  },
-  {
-    branch: "Stories Hamra",
-    cluster: 1,
-    health_score: 62.4,
-    gap_profit: 20800,
-    avg_revenue: 49000,
-    margin: 0.27,
-    growth: 0.03,
-    volatility: 0.16,
-    bev_share: 0.73,
-    food_share: 0.27,
-  },
-  {
-    branch: "Stories Mar Mikhael",
-    cluster: 0,
-    health_score: 83.1,
-    gap_profit: 6900,
-    avg_revenue: 62000,
-    margin: 0.34,
-    growth: 0.1,
-    volatility: 0.09,
-    bev_share: 0.64,
-    food_share: 0.36,
-  },
-  {
-    branch: "Stories Verdun",
-    cluster: 1,
-    health_score: 58.9,
-    gap_profit: 25650,
-    avg_revenue: 44000,
-    margin: 0.23,
-    growth: -0.01,
-    volatility: 0.2,
-    bev_share: 0.76,
-    food_share: 0.24,
-  },
-];
-
-const mockClusters = [
-  {
-    cluster: 0,
-    count: 6,
-    avg_margin: 0.29,
-    avg_growth: 0.04,
-    avg_volatility: 0.1,
-    avg_bev_share: 0.7,
-    avg_food_share: 0.3,
-  },
-  {
-    cluster: 1,
-    count: 8,
-    avg_margin: 0.25,
-    avg_growth: 0.01,
-    avg_volatility: 0.17,
-    avg_bev_share: 0.74,
-    avg_food_share: 0.26,
-  },
-  {
-    cluster: 2,
-    count: 5,
-    avg_margin: 0.33,
-    avg_growth: 0.09,
-    avg_volatility: 0.08,
-    avg_bev_share: 0.66,
-    avg_food_share: 0.34,
-  },
-];
-
-const mockBranchMonthly = {
-  "Stories Zalka": {
-    branch: "Stories Zalka",
-    monthly: [
-      { month: "2025-01", revenue: 42000, profit: 12000 },
-      { month: "2025-02", revenue: 39000, profit: 11000 },
-      { month: "2025-03", revenue: 46000, profit: 13800 },
-      { month: "2025-04", revenue: 51000, profit: 15000 },
-      { month: "2025-05", revenue: 56000, profit: 17400 },
-    ],
-  },
-};
-
 const state = {
   branches: [],
   clusters: [],
@@ -113,7 +19,6 @@ const state = {
   sortKey: "health_score",
   sortDirection: "desc",
   searchTerm: "",
-  usingMock: false,
 };
 
 const elements = {
@@ -129,8 +34,8 @@ const elements = {
     "branch-detail": document.getElementById("page-branch-detail"),
   },
   kpiTotalBranches: document.getElementById("kpi-total-branches"),
-  kpiTotalGap: document.getElementById("kpi-total-gap"),
-  kpiLowestHealth: document.getElementById("kpi-lowest-health"),
+  kpiTotalRevenue: document.getElementById("kpi-total-revenue"),
+  kpiAvgHealth: document.getElementById("kpi-avg-health"),
   search: document.getElementById("branch-search"),
   tableBody: document.getElementById("branches-tbody"),
   tableHeaders: [...document.querySelectorAll("#branches-table th[data-sort]")],
@@ -140,14 +45,15 @@ const elements = {
   detailName: document.getElementById("detail-branch-name"),
   detailClusterBadge: document.getElementById("detail-cluster-badge"),
   detailHealth: document.getElementById("detail-health"),
-  detailGap: document.getElementById("detail-gap"),
-  detailMargin: document.getElementById("detail-margin"),
+  detailAvgRevenue: document.getElementById("detail-avg-revenue"),
+  detailGrowth: document.getElementById("detail-growth"),
   detailVolatility: document.getElementById("detail-volatility"),
+  detailMayJuneDrop: document.getElementById("detail-may-june-drop"),
   monthlyTbody: document.getElementById("monthly-tbody"),
   revenueCanvas: document.getElementById("revenue-canvas"),
 };
 
-init();
+window.addEventListener("DOMContentLoaded", init);
 
 function init() {
   bindEvents();
@@ -212,12 +118,15 @@ function hydrateUI() {
 
 function renderOverviewKPIs() {
   const totalBranches = state.branches.length;
-  const totalGap = state.branches.reduce((sum, b) => sum + Number(b.gap_profit || 0), 0);
-  const lowest = [...state.branches].sort((a, b) => a.health_score - b.health_score)[0];
+  const totalRevenue = state.branches.reduce((sum, b) => sum + Number(b.total_revenue || 0), 0);
+  const avgHealth =
+    totalBranches > 0
+      ? state.branches.reduce((sum, b) => sum + Number(b.health_score || 0), 0) / totalBranches
+      : 0;
 
   elements.kpiTotalBranches.textContent = String(totalBranches);
-  elements.kpiTotalGap.textContent = formatCurrency(totalGap);
-  elements.kpiLowestHealth.textContent = lowest ? lowest.branch : "-";
+  elements.kpiTotalRevenue.textContent = formatCurrency(totalRevenue);
+  elements.kpiAvgHealth.textContent = formatNumber(avgHealth, 1);
 }
 
 function renderOverviewTable() {
@@ -230,11 +139,11 @@ function renderOverviewTable() {
       <td>${escapeHtml(branch.branch)}</td>
       <td>${branch.cluster}</td>
       <td>${formatNumber(branch.health_score, 1)}</td>
-      <td>${formatCurrency(branch.gap_profit)}</td>
+      <td>${formatCurrency(branch.total_revenue)}</td>
       <td>${formatCurrency(branch.avg_revenue)}</td>
-      <td>${formatPercent(branch.margin)}</td>
       <td>${formatPercent(branch.growth)}</td>
       <td>${formatPercent(branch.volatility)}</td>
+      <td>${formatPercent(branch.may_june_drop)}</td>
     `;
     tr.addEventListener("click", () => openBranchDetail(branch.branch, true));
     elements.tableBody.appendChild(tr);
@@ -277,14 +186,15 @@ function renderClusters() {
         <p>${c.count} branches</p>
       </div>
       <div class="cluster-stats">
-        <div class="cluster-stat"><p>Avg Margin</p><strong>${formatPercent(c.avg_margin)}</strong></div>
+        <div class="cluster-stat"><p>Avg Health</p><strong>${formatNumber(c.avg_health_score, 1)}</strong></div>
+        <div class="cluster-stat"><p>Avg Revenue</p><strong>${formatCurrency(c.avg_revenue)}</strong></div>
         <div class="cluster-stat"><p>Avg Growth</p><strong>${formatPercent(c.avg_growth)}</strong></div>
         <div class="cluster-stat"><p>Avg Volatility</p><strong>${formatPercent(c.avg_volatility)}</strong></div>
-        <div class="cluster-stat"><p>Mix (Bev/Food)</p><strong>${formatPercent(c.avg_bev_share)} / ${formatPercent(c.avg_food_share)}</strong></div>
+        <div class="cluster-stat"><p>Avg May-Jun Drop</p><strong>${formatPercent(c.avg_may_june_drop)}</strong></div>
       </div>
       <div class="profile-row">
-        <span><small>Margin</small><small>${formatPercent(c.avg_margin)}</small></span>
-        <div class="bar-shell"><div class="bar-fill" style="width:${clamp01(c.avg_margin) * 100}%"></div></div>
+        <span><small>Health</small><small>${formatNumber(c.avg_health_score, 1)}</small></span>
+        <div class="bar-shell"><div class="bar-fill" style="width:${clamp01(c.avg_health_score / 100) * 100}%"></div></div>
       </div>
       <div class="profile-row">
         <span><small>Growth</small><small>${formatPercent(c.avg_growth)}</small></span>
@@ -295,8 +205,8 @@ function renderClusters() {
         <div class="bar-shell"><div class="bar-fill" style="width:${(1 - clamp01(c.avg_volatility)) * 100}%"></div></div>
       </div>
       <div class="profile-row">
-        <span><small>Beverage Share</small><small>${formatPercent(c.avg_bev_share)}</small></span>
-        <div class="bar-shell"><div class="bar-fill" style="width:${clamp01(c.avg_bev_share) * 100}%"></div></div>
+        <span><small>May-Jun Drop (inverse)</small><small>${formatPercent(c.avg_may_june_drop)}</small></span>
+        <div class="bar-shell"><div class="bar-fill" style="width:${(1 - clamp01(c.avg_may_june_drop)) * 100}%"></div></div>
       </div>
     `;
     elements.clustersGrid.appendChild(card);
@@ -313,9 +223,10 @@ async function openBranchDetail(branchName, switchPage) {
   elements.detailName.textContent = branch.branch;
   elements.detailClusterBadge.textContent = `Cluster ${branch.cluster}`;
   elements.detailHealth.textContent = formatNumber(branch.health_score, 1);
-  elements.detailGap.textContent = formatCurrency(branch.gap_profit);
-  elements.detailMargin.textContent = formatPercent(branch.margin);
+  elements.detailAvgRevenue.textContent = formatCurrency(branch.avg_revenue);
+  elements.detailGrowth.textContent = formatPercent(branch.growth);
   elements.detailVolatility.textContent = formatPercent(branch.volatility);
+  elements.detailMayJuneDrop.textContent = formatPercent(branch.may_june_drop);
 
   let detail = state.detailByBranch[branchName];
   if (!detail) {
@@ -441,7 +352,7 @@ function drawClusterMap(branches) {
 function renderMonthlyTable(monthly) {
   elements.monthlyTbody.innerHTML = "";
   if (!monthly.length) {
-    elements.monthlyTbody.innerHTML = `<tr><td colspan="3">No monthly data available.</td></tr>`;
+    elements.monthlyTbody.innerHTML = `<tr><td colspan="2">No monthly data available.</td></tr>`;
     return;
   }
   for (const row of monthly) {
@@ -449,7 +360,6 @@ function renderMonthlyTable(monthly) {
     tr.innerHTML = `
       <td>${escapeHtml(row.month)}</td>
       <td>${formatCurrency(row.revenue)}</td>
-      <td>${formatCurrency(row.profit)}</td>
     `;
     elements.monthlyTbody.appendChild(tr);
   }
