@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stories Coffee Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SC</div>
+        <div>
+          <p class="brand-kicker">Hackathon</p>
+          <h1>Stories Coffee</h1>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" aria-label="Main navigation">
+        <button class="nav-tab active" data-page="overview">Overview</button>
+        <button class="nav-tab" data-page="clusters">Clusters</button>
+        <button class="nav-tab" data-page="branch-detail">Branch Detail</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <p>ML Branch Insights</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Dashboard</p>
+          <h2 id="page-title">Overview</h2>
+        </div>
+        <div class="status-chip" id="data-source-chip">Loading data...</div>
+      </header>
+
+      <section id="state-loading" class="state-card hidden">
+        <p>Loading dashboard data...</p>
+      </section>
+
+      <section id="state-error" class="state-card hidden error">
+        <p id="error-text">Could not load data.</p>
+      </section>
+
+      <section id="page-overview" class="page active">
+        <div class="kpi-grid">
+          <article class="card kpi">
+            <p>Total Branches</p>
+            <h3 id="kpi-total-branches">0</h3>
+          </article>
+          <article class="card kpi">
+            <p>Total Opportunity Gap</p>
+            <h3 id="kpi-total-gap">$0</h3>
+          </article>
+          <article class="card kpi">
+            <p>Highest Fragility Branch</p>
+            <h3 id="kpi-lowest-health">-</h3>
+          </article>
+        </div>
+
+        <article class="card table-card">
+          <div class="table-head">
+            <h3>Branch Performance</h3>
+            <input id="branch-search" type="search" placeholder="Search branch name...">
+          </div>
+          <div class="table-wrap">
+            <table id="branches-table">
+              <thead>
+                <tr>
+                  <th data-sort="branch">Branch</th>
+                  <th data-sort="cluster">Cluster</th>
+                  <th data-sort="health_score">Health Score</th>
+                  <th data-sort="gap_profit">Gap Profit</th>
+                  <th data-sort="avg_revenue">Avg Revenue</th>
+                  <th data-sort="margin">Margin</th>
+                  <th data-sort="growth">Growth</th>
+                  <th data-sort="volatility">Volatility</th>
+                </tr>
+              </thead>
+              <tbody id="branches-tbody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="page-clusters" class="page">
+        <div id="clusters-grid" class="clusters-grid"></div>
+      </section>
+
+      <section id="page-branch-detail" class="page">
+        <article class="card detail-header">
+          <div>
+            <h3 id="detail-branch-name">Select a branch</h3>
+            <p class="badge" id="detail-cluster-badge">Cluster -</p>
+          </div>
+        </article>
+
+        <div class="mini-grid">
+          <article class="card mini">
+            <p>Health Score</p>
+            <h4 id="detail-health">-</h4>
+          </article>
+          <article class="card mini">
+            <p>Gap Profit</p>
+            <h4 id="detail-gap">-</h4>
+          </article>
+          <article class="card mini">
+            <p>Margin</p>
+            <h4 id="detail-margin">-</h4>
+          </article>
+          <article class="card mini">
+            <p>Volatility</p>
+            <h4 id="detail-volatility">-</h4>
+          </article>
+        </div>
+
+        <article class="card chart-card">
+          <div class="chart-title-wrap">
+            <h3>Monthly Revenue Trend</h3>
+          </div>
+          <canvas id="revenue-canvas" width="980" height="320" aria-label="Revenue line chart"></canvas>
+        </article>
+
+        <article class="card table-card">
+          <h3>Monthly Revenue & Profit</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Revenue</th>
+                  <th>Profit</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-tbody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
