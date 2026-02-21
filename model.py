@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from utils import safe_div
@@ -18,6 +18,7 @@ STRUCTURAL_FEATURES = [
     "beverage_share",
     "top5_profit_share",
 ]
+FIXED_CLUSTER_COUNT = 3
 
 
 def _fit_clusters(df: pd.DataFrame) -> np.ndarray:
@@ -32,30 +33,32 @@ def _fit_clusters(df: pd.DataFrame) -> np.ndarray:
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    best_k = min(4, len(df))
-    best_score = -1.0
-    best_labels = None
-    for k in [3, 4, 5]:
-        if k >= len(df):
-            continue
-        try:
-            km = KMeans(n_clusters=k, n_init=20, random_state=42)
-            labels = km.fit_predict(X_scaled)
-            if len(set(labels)) < 2:
-                continue
-            score = silhouette_score(X_scaled, labels)
-            if score > best_score:
-                best_score = score
-                best_k = k
-                best_labels = labels
-        except Exception:
-            continue
+    cluster_count = min(FIXED_CLUSTER_COUNT, len(df))
+    if cluster_count <= 1:
+        return np.zeros(len(df), dtype=int)
 
-    if best_labels is not None:
-        return best_labels
-
-    km = KMeans(n_clusters=max(2, best_k), n_init=20, random_state=42)
+    km = KMeans(n_clusters=cluster_count, n_init=20, random_state=42)
     return km.fit_predict(X_scaled)
+
+
+def _compute_pca_2d(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    if len(df) == 0:
+        return np.array([]), np.array([])
+
+    X = df[STRUCTURAL_FEATURES].copy()
+    for col in STRUCTURAL_FEATURES:
+        X[col] = pd.to_numeric(X[col], errors="coerce")
+        X[col] = X[col].fillna(X[col].median() if X[col].notna().any() else 0.0)
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    if len(df) < 2:
+        return np.zeros(len(df)), np.zeros(len(df))
+
+    pca = PCA(n_components=2, random_state=42)
+    transformed = pca.fit_transform(X_scaled)
+    return transformed[:, 0], transformed[:, 1]
 
 
 def _compute_health_score(df: pd.DataFrame) -> pd.Series:
@@ -81,6 +84,9 @@ def run_model(branch_df: pd.DataFrame) -> pd.DataFrame:
 
     out = branch_df.copy()
     out["cluster"] = _fit_clusters(out)
+    pca_1, pca_2 = _compute_pca_2d(out)
+    out["pca_1"] = pca_1
+    out["pca_2"] = pca_2
     out["health_score"] = _compute_health_score(out)
 
     benchmark_rows = (
@@ -115,10 +121,10 @@ def build_cluster_summary(scored_df: pd.DataFrame) -> List[dict]:
             avg_growth=("growth_rate", "mean"),
             avg_volatility=("volatility", "mean"),
             avg_bev_share=("beverage_share", "mean"),
+            avg_food_share=("food_share", "mean"),
             avg_top5_profit_share=("top5_profit_share", "mean"),
             best_branch_name=("benchmark_branch", "first"),
         )
         .sort_values("cluster")
     )
     return summary.to_dict(orient="records")
-

@@ -65,10 +65,13 @@ def _extract_monthly_records(monthly_df: pd.DataFrame) -> Tuple[Dict[str, List[d
         else:
             growth_rate = 0.0
         volatility = safe_div(float(np.std(revenues)), avg_monthly_revenue, 0.0) if revenues else 0.0
+        growth_rate = float(np.clip(growth_rate, -1.0, 2.0))
+        volatility = float(np.clip(volatility, 0.0, 1.5))
 
         apr = next((p["revenue"] for p in points if p["month"] == "2025-04"), None)
         jun = next((p["revenue"] for p in points if p["month"] == "2025-06"), None)
         may_june_drop = safe_div(apr - jun, apr, 0.0) if apr and jun else 0.0
+        may_june_drop = float(np.clip(may_june_drop, -1.0, 1.0))
 
         rows.append(
             {
@@ -193,4 +196,3 @@ def build_branch_dataset(
     merged["branch_profit_est"] = merged["total_profit"].fillna(0.0)
 
     return merged, monthly_map, top_products_by_branch
-

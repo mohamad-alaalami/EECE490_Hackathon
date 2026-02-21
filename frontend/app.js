@@ -135,6 +135,8 @@ const elements = {
   tableBody: document.getElementById("branches-tbody"),
   tableHeaders: [...document.querySelectorAll("#branches-table th[data-sort]")],
   clustersGrid: document.getElementById("clusters-grid"),
+  clusterCanvas: document.getElementById("cluster-canvas"),
+  clusterLegend: document.getElementById("cluster-legend"),
   detailName: document.getElementById("detail-branch-name"),
   detailClusterBadge: document.getElementById("detail-cluster-badge"),
   detailHealth: document.getElementById("detail-health"),
@@ -264,6 +266,7 @@ function updateSortIndicators() {
 }
 
 function renderClusters() {
+  drawClusterMap(state.branches);
   elements.clustersGrid.innerHTML = "";
   for (const c of state.clusters) {
     const card = document.createElement("article");
@@ -319,7 +322,7 @@ async function openBranchDetail(branchName, switchPage) {
     try {
       detail = await fetchJson(API.branchDetail(branchName));
     } catch (error) {
-      detail = mockBranchMonthly[branchName] || {
+      detail = {
         branch: branchName,
         monthly: [],
       };
@@ -329,6 +332,110 @@ async function openBranchDetail(branchName, switchPage) {
 
   renderMonthlyTable(detail.monthly || []);
   drawRevenueChart(detail.monthly || []);
+}
+
+function drawClusterMap(branches) {
+  const canvas = elements.clusterCanvas;
+  const legend = elements.clusterLegend;
+  const ctx = canvas?.getContext("2d");
+  if (!canvas || !ctx || !legend) return;
+
+  const points = (branches || []).filter(
+    (b) => Number.isFinite(Number(b.pca_1)) && Number.isFinite(Number(b.pca_2))
+  );
+  legend.innerHTML = "";
+
+  const ratio = window.devicePixelRatio || 1;
+  const cssWidth = canvas.clientWidth || 980;
+  const cssHeight = 460;
+  canvas.width = Math.floor(cssWidth * ratio);
+  canvas.height = Math.floor(cssHeight * ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const w = cssWidth;
+  const h = cssHeight;
+  const pad = { left: 62, right: 24, top: 24, bottom: 50 };
+  ctx.clearRect(0, 0, w, h);
+
+  if (!points.length) {
+    ctx.fillStyle = "#557365";
+    ctx.font = "14px Manrope";
+    ctx.fillText("No PCA cluster points available.", 20, 30);
+    return;
+  }
+
+  const xs = points.map((p) => Number(p.pca_1));
+  const ys = points.map((p) => Number(p.pca_2));
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 1e-6);
+  const spanY = Math.max(maxY - minY, 1e-6);
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  ctx.strokeStyle = "#dcebe2";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const y = pad.top + (i / 4) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+  }
+  for (let i = 0; i <= 4; i += 1) {
+    const x = pad.left + (i / 4) * plotW;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, h - pad.bottom);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = "#9ab8a8";
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, h - pad.bottom);
+  ctx.lineTo(w - pad.right, h - pad.bottom);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, h - pad.bottom);
+  ctx.stroke();
+
+  const colorMap = ["#2b7bba", "#f08a24", "#3ea95b"];
+  const seenClusters = [...new Set(points.map((p) => Number(p.cluster)).sort((a, b) => a - b))];
+
+  seenClusters.forEach((clusterId) => {
+    const color = colorMap[clusterId] || "#777";
+    const chip = document.createElement("span");
+    chip.innerHTML = `<i style="background:${color}"></i>Cluster ${clusterId}`;
+    legend.appendChild(chip);
+  });
+
+  points.forEach((p) => {
+    const x = pad.left + ((Number(p.pca_1) - minX) / spanX) * plotW;
+    const y = h - pad.bottom - ((Number(p.pca_2) - minY) / spanY) * plotH;
+    const cluster = Number(p.cluster);
+    ctx.fillStyle = colorMap[cluster] || "#777";
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = "#365a49";
+  ctx.font = "13px Manrope";
+  ctx.fillText("Principal Component 1", w / 2 - 60, h - 16);
+  ctx.save();
+  ctx.translate(18, h / 2 + 70);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Principal Component 2", 0, 0);
+  ctx.restore();
 }
 
 function renderMonthlyTable(monthly) {
@@ -489,6 +596,7 @@ function escapeHtml(input) {
 }
 
 window.addEventListener("resize", () => {
+  drawClusterMap(state.branches);
   if (!state.selectedBranch) return;
   const detail = state.detailByBranch[state.selectedBranch];
   if (detail) drawRevenueChart(detail.monthly || []);

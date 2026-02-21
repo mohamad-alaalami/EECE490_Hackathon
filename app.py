@@ -79,6 +79,8 @@ def _branch_payload(df: pd.DataFrame) -> List[dict]:
                 "top5_profit_share": round(float(r.get("top5_profit_share", 0.0)), 4),
                 "sku_count": int(r.get("sku_count", 0)),
                 "may_june_drop": round(float(r.get("may_june_drop", 0.0)), 4),
+                "pca_1": round(float(r.get("pca_1", 0.0)), 4),
+                "pca_2": round(float(r.get("pca_2", 0.0)), 4),
             }
         )
     return out
