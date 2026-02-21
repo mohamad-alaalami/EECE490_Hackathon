@@ -1,122 +1,64 @@
-# Branch Performance Intelligence Dashboard (Clustering + Health Score + Opportunity Gap)
+# Branch Performance Intelligence Dashboard (Clustering + Health + Opportunity Gap + Bundling)
 
-A lightweight, executive-facing dashboard that groups branches by **structural behavior**, scores branch **health** relative to similar peers, and quantifies **unrealized profit opportunity** (“gap-to-best-in-cluster”).
-
-Instead of clustering on raw revenue (size-dominated and misleading), this system clusters branches on **behavioral ratios** (margin, growth, volatility, product mix) to generate clear **branch personas** and actionable priorities.
+A lightweight decision dashboard that groups branches by **structural behavior**, benchmarks performance **within peer clusters**, quantifies **profit opportunity gap**, and recommends **profit-safe bundles** to move low-selling/low-profit items.
 
 ---
 
-## What This Delivers (CEO Language)
-
-✅ **“Which branches are underperforming relative to similar peers?”**  
-✅ **“How much profit are we leaving on the table?”**  
-✅ **“What characterizes each branch cluster?”**  
-
-Outputs:
-- **Structural clusters** (branch personas)
-- **Health score** per branch (within-cluster normalization)
-- **Gap-to-best** metric (benchmarking vs. top peer in cluster)
-- A simple **decision dashboard**: Overview → Cluster → Branch drill-down
+## Business Problem
+Leadership needs to answer:
+1) **Which branches are underperforming vs comparable peers?**  
+2) **How much profit is being left on the table (gap-to-best)?**  
+3) **Which low-selling items can be promoted without losing money (bundles)?**
 
 ---
 
-## Method Overview
+## Approach & Methodology
+### 1) Structural Clustering (Branch Personas)
+We engineer behavior-based features (size-invariant): margin %, product mix, growth, volatility, etc.  
+Standardize features → **KMeans** (k≈3–4) → clusters = branch personas.
 
-### 1) Structural Behavior Clustering (Branch Personas)
-For each branch, we engineer *behavioral features* so size doesn’t dominate:
+### 2) Health Score (within cluster)
+Composite score (normalized within cluster), e.g. margin + growth + stability + revenue.
 
-- Avg monthly revenue  
-- Avg monthly profit  
-- **Margin %** = profit / revenue  
-- Beverage revenue share  
-- Food revenue share  
-- **Revenue growth rate** (first month vs last month)  
-- **Revenue volatility** = std(revenue) / mean(revenue)
+### 3) Gap-to-Best-in-Cluster (Opportunity)
+Benchmark each branch against the top peer in its cluster:  
+**Gap = Potential Profit − Actual Profit**
 
-We aggregate monthly data → **one row per branch**, standardize features, then run **KMeans** (k=3 or 4).
-
----
-
-### 2) Health Score (Within Cluster)
-Inside each cluster:
-
-**Health Score** (example weights, defensible and simple):
-
-`Health = 0.4*Margin + 0.2*Growth + 0.2*(1-Volatility) + 0.2*Revenue`
-
-All components are normalized **within the cluster**.
+### 4) Bundle Recommender (New)
+For each branch:
+- detect **low-selling / low-profit items**
+- pick strong **anchor** items
+- propose **bundle price + discount** such that **bundle profit remains positive** and meets a target margin  
+Uses transaction co-occurrence if available; otherwise a lightweight fallback.
 
 ---
 
-### 3) Opportunity Gap (Gap-to-Best-in-Cluster)
-For each cluster, the **top branch** becomes the benchmark.
-
-We estimate “potential profit” if the branch matched the benchmark margin:
-
-`Potential Profit = Benchmark Margin * Branch Revenue`  
-`Gap = Potential Profit - Actual Profit`
-
-This quantifies **unrealized profit opportunity** in real dollars.
+## Key Outputs
+- `data/processed/branches_scored.csv` — cluster, health score, gap per branch  
+- `data/processed/branch_monthly.csv` — time series for branch drilldown  
+- `data/processed/bundles.csv` — bundle suggestions per branch
 
 ---
 
-## Dashboard Pages
+## Key Findings & Visualizations
 
-### Overview
-- Total opportunity gap across all branches
-- Table: Branch | Cluster | Health Score | Gap
-- Sort by highest gap → instantly shows where profit is leaking
+**Clustering results (reports/figures):**
 
-### Cluster View
-- Cluster averages (margin, growth, volatility, mix)
-- Cluster profile chart (radar/bar) to explain personas visually
+1) **PCA Cluster Map** — how branches separate in 2D embedding  
+![](reports/figures/cluster_pca_map.png)
 
-### Branch Detail
-- Revenue trend line
-- Margin trend
-- Health score breakdown
-- Gap vs cluster leader
-- **Bundle Recommendations** (see Bundle Recommender section)
+2) **Cluster Profile** — average behavioral signature per cluster (persona view)  
+![](reports/figures/cluster_profile.png)
 
----
+3) **Health Score Distribution** — spread of performance within peer groups  
+![](reports/figures/health_score_distribution.png)
 
-## Bundle Recommender
+4) **Opportunity Gap (Bar)** — where unrealized profit is concentrated  
+![](reports/figures/opportunity_gap_bar.png)
 
-### What It Does
-Identifies product bundles that increase basket size and same-visit profitability:
-
-- **Low-sales items** bundled with **anchor items** (high volume)
-- Strategic discount to meet target bundle margin
-- Outputs: **lift** (correlation), **support** (co-occurrence %), **expected profit**
-
-### How to Run
-
+## How to Run (Local)
+### 1) Setup
 ```bash
-python scripts/run_bundles.py
-```
-
-Creates: `data/processed/bundles.csv`
-
-Input files:
-- `data/raw/branch_item_sales.csv` (required): branch_id, item_id, revenue, cost, units_sold
-- `data/raw/transactions.csv` (optional): branch_id, transaction_id, item1_id, item2_id, ...
-
-Output columns: branch_id, bundle_items, discount_pct, bundle_price, expected_profit, reason, lift, support
-
-### Front-end
-Shows in **Branch Detail** view under "Bundle Recommendations":
-- If no bundles exist: "No bundle suggestions. Run: `python scripts/run_bundles.py`"
-- Otherwise: table with Bundle Items, Discount, Price, Profit, Reason, Lift, Support
-
----
-
-## Tech Stack
-
-- **Python**: pandas, numpy, scikit-learn  
-- **Backend**: Flask  
-- **Frontend**: Plotly / Chart.js (simple HTML templates)  
-- **Data**: CSV (no database needed for demo)
-
----
-
-## Project Structure
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
