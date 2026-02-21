@@ -11,6 +11,8 @@ const API = {
     `${API_BASE}/api/branch/${encodeURIComponent(branchName)}`,
 };
 
+fetch("/api/branches")
+
 const mockBranches = [
   {
     branch: "Stories Zalka",
